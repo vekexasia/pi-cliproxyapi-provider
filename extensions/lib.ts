@@ -43,6 +43,7 @@ export interface CliproxyConfigFile {
 	providerName?: string;
 	fast?: boolean;
 	pause?: boolean;
+	headers?: Record<string, string>;
 }
 
 export interface ResolvedIdentity {
@@ -264,6 +265,23 @@ export function loadConfigFile(agentDir: string): CliproxyConfigFile {
 		}
 		return {};
 	}
+}
+
+/** Extra headers sent on every CLIProxyAPI request (e.g. Cloudflare Access service token). */
+export function resolveExtraHeaders(agentDir: string): Record<string, string> | undefined {
+	const { headers } = loadConfigFile(agentDir);
+	if (headers === undefined) {
+		return undefined;
+	}
+	if (
+		!headers ||
+		typeof headers !== "object" ||
+		Array.isArray(headers) ||
+		Object.values(headers).some((value) => typeof value !== "string")
+	) {
+		throw new Error(`${CONFIG_FILE_NAME} field "headers" must be an object of string values`);
+	}
+	return Object.keys(headers).length > 0 ? headers : undefined;
 }
 
 export const SETTINGS_FILE_NAME = "settings.json";
@@ -601,11 +619,13 @@ export async function fetchCodexModels(
 	apiKey: string,
 	timeoutMs = MODELS_REQUEST_TIMEOUT_MS,
 	signal?: AbortSignal,
+	extraHeaders?: Record<string, string>,
 ): Promise<CodexClientModel[]> {
 	const timeoutSignal = AbortSignal.timeout(timeoutMs);
 	const requestSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
 	const response = await fetch(modelsUrl, {
 		headers: {
+			...extraHeaders,
 			Authorization: `Bearer ${apiKey}`,
 			Accept: "application/json",
 		},
@@ -939,7 +959,13 @@ export async function loadMappedModels(
 	const timeoutMs = typeof timeoutOrFastMode === "number" ? timeoutOrFastMode : MODELS_REQUEST_TIMEOUT_MS;
 	const endpoints = resolveEndpoints(baseUrlInput);
 	const [remoteModels, costCatalog] = await Promise.all([
-		fetchCodexModels(endpoints.modelsUrl, apiKey, timeoutMs, signal),
+		fetchCodexModels(
+			endpoints.modelsUrl,
+			apiKey,
+			timeoutMs,
+			signal,
+			agentDir ? resolveExtraHeaders(agentDir) : undefined,
+		),
 		pricingEnabled ? fetchModelsDevCostMap(agentDir, false, signal) : Promise.resolve(undefined),
 	]);
 	const models = remoteModels

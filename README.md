@@ -100,6 +100,7 @@ Optional fields:
 | `providerName` | `CLIProxyAPI` | Display name in `/login` and UI |
 | `fast` | `false` | Persisted Fast mode preference; only applies to catalog-supported models |
 | `pause` | `false` | Persisted request-pause preference; provider requests wait until it is cleared |
+| `headers` | _(none)_ | Extra headers sent on every request (catalog, SSE and WebSocket), e.g. `CF-Access-Client-Id` and `CF-Access-Client-Secret` for a Cloudflare Access service token. Values are literal strings; `Authorization` always comes from the API key |
 
 ### Environment overrides
 

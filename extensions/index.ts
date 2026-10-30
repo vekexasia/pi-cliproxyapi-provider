@@ -52,6 +52,7 @@ import {
 	type PiProviderModel,
 	resolveConnection,
 	resolveEndpoints,
+	resolveExtraHeaders,
 	resolveFastDefault,
 	resolveIdentity,
 	resolveMappedModels,
@@ -531,11 +532,14 @@ function registerProvider(
 	// via registerProvider merge semantics and reintroduce the auth-type selector.
 	pi.unregisterProvider(providerId);
 
+	const headers = resolveExtraHeaders(agentDir);
+
 	pi.registerProvider(providerId, {
 		name: providerName,
 		baseUrl: endpoints.inferenceBaseUrl,
 		api: CLIPROXYAPI_CODEX_API,
 		streamSimple,
+		...(headers ? { headers } : {}),
 		// OAuth-only keeps `/login <provider>` on the multi-field account path.
 		// Pass apiKey only for ambient request auth when no /login credential exists
 		// (config file / env). Never pass both for /login flows.
